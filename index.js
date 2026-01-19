@@ -149,3 +149,213 @@ function renderCharts() {
     // User categories pie chart
     renderUserCategoriesChart(data);
 }
+
+function renderTopProvincesChart(data) {
+    const sorted = [...data].sort((a, b) => {
+        const totalA = (a.residential_kwh || 0) + (a.small_business_kwh || 0) + 
+                      (a.medium_business_kwh || 0) + (a.large_business_kwh || 0);
+        const totalB = (b.residential_kwh || 0) + (b.small_business_kwh || 0) + 
+                      (b.medium_business_kwh || 0) + (b.large_business_kwh || 0);
+        return totalB - totalA;
+    }).slice(0, 10);
+
+    const ctx = document.getElementById('topProvincesChart');
+    
+    if (topProvincesChart) {
+        topProvincesChart.destroy();
+    }
+
+    topProvincesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sorted.map(d => d.province_name),
+            datasets: [{
+                label: 'Total Usage (kWh)',
+                data: sorted.map(d => 
+                    (d.residential_kwh || 0) + 
+                    (d.small_business_kwh || 0) + 
+                    (d.medium_business_kwh || 0) + 
+                    (d.large_business_kwh || 0)
+                ),
+                backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                borderColor: 'rgba(37, 99, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Usage: ' + formatNumber(Math.round(context.parsed.y)) + ' kWh';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderUsageDistributionChart(data) {
+    const totals = {
+        residential: data.reduce((sum, d) => sum + (d.residential_kwh || 0), 0),
+        smallBusiness: data.reduce((sum, d) => sum + (d.small_business_kwh || 0), 0),
+        mediumBusiness: data.reduce((sum, d) => sum + (d.medium_business_kwh || 0), 0),
+        largeBusiness: data.reduce((sum, d) => sum + (d.large_business_kwh || 0), 0),
+        specialized: data.reduce((sum, d) => sum + (d.specialized_business_kwh || 0), 0)
+    };
+
+    const ctx = document.getElementById('usageDistributionChart');
+    
+    if (usageDistributionChart) {
+        usageDistributionChart.destroy();
+    }
+
+    usageDistributionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Residential', 'Small Business', 'Medium Business', 'Large Business', 'Specialized'],
+            datasets: [{
+                data: [
+                    totals.residential,
+                    totals.smallBusiness,
+                    totals.mediumBusiness,
+                    totals.largeBusiness,
+                    totals.specialized
+                ],
+                backgroundColor: [
+                    'rgba(37, 99, 235, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(139, 92, 246, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = formatNumber(Math.round(context.parsed));
+                            return label + ': ' + value + ' kWh';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderUserCategoriesChart(data) {
+    const totals = {
+        residential: data.reduce((sum, d) => sum + (d.residential_count || 0), 0),
+        smallBusiness: data.reduce((sum, d) => sum + (d.small_business_count || 0), 0),
+        mediumBusiness: data.reduce((sum, d) => sum + (d.medium_business_count || 0), 0),
+        largeBusiness: data.reduce((sum, d) => sum + (d.large_business_count || 0), 0),
+        specialized: data.reduce((sum, d) => sum + (d.specialized_business_count || 0), 0)
+    };
+
+    const ctx = document.getElementById('userCategoriesChart');
+    
+    if (userCategoriesChart) {
+        userCategoriesChart.destroy();
+    }
+
+    userCategoriesChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Residential', 'Small Business', 'Medium Business', 'Large Business', 'Specialized'],
+            datasets: [{
+                data: [
+                    totals.residential,
+                    totals.smallBusiness,
+                    totals.mediumBusiness,
+                    totals.largeBusiness,
+                    totals.specialized
+                ],
+                backgroundColor: [
+                    'rgba(37, 99, 235, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(139, 92, 246, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = formatNumber(context.parsed);
+                            return label + ': ' + value + ' users';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Get filtered data based on current filters
+function getFilteredData() {
+    const provinceFilter = document.getElementById('provinceFilter').value;
+    const searchText = document.getElementById('searchBox').value.toLowerCase();
+
+    return mergedData.filter(d => {
+        const matchesProvince = !provinceFilter || d.province_name === provinceFilter;
+        const matchesSearch = !searchText || d.province_name.toLowerCase().includes(searchText);
+        return matchesProvince && matchesSearch;
+    });
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    document.getElementById('provinceFilter').addEventListener('change', () => {
+        updateStats();
+        renderTable();
+        renderCharts();
+    });
+
+    document.getElementById('searchBox').addEventListener('input', () => {
+        updateStats();
+        renderTable();
+        renderCharts();
+    });
+}
+
+// Format number with commas
+function formatNumber(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', init);
