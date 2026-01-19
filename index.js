@@ -43,7 +43,7 @@ async function loadData() {
         console.error('Error loading data:', error);
         throw error;
     }
-}
+// Missing closing brace here!
 
 // Populate province filter dropdown
 function populateProvinceFilter() {
